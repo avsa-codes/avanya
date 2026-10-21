@@ -124,7 +124,7 @@ export default function SwipeDeck({
   }
 
   return (
-    <section className="mx-auto w-full max-w-sm">
+    <section className="mx-auto w-full max-w-[340px] px-2">
       <div className="relative pb-3">
         {/* Cards waiting underneath */}
         {visibleProducts.slice(1, 3).map((product, index) => {
@@ -183,14 +183,14 @@ export default function SwipeDeck({
           )}
 
           <a href={frontProduct.href} draggable={false} className="block">
-            <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#F1EAE0]">
+            <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#F1EAE0]">
               <Image
                 src={frontProduct.image}
                 alt={frontProduct.name}
                 fill
                 priority
                 draggable={false}
-                sizes="(max-width: 640px) 92vw, 400px"
+                sizes="(max-width: 640px) 340px, 340px"
                 className="pointer-events-none object-cover"
               />
 
