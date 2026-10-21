@@ -39,3 +39,12 @@ body {
   color: var(--color-text);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.marketplace-category-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.marketplace-category-scroll::-webkit-scrollbar {
+  display: none;
+}
