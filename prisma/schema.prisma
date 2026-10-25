@@ -1,0 +1,548 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+//Models 
+//1. User
+
+model User {
+  id              String       @id @default(uuid()) @db.Uuid
+  fullName        String
+  email           String       @unique
+  passwordHash    String
+  gender          Gender
+  profileImage    String?
+  isEmailVerified Boolean      @default(false)
+  isDeleted       Boolean      @default(false)
+  authProvider    AuthProvider
+
+  //relationships
+
+  carts     Cart[]
+  addresses Address[]
+  orders    Order[]
+  reviews   Review[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+ 
+}
+
+//2. Product
+
+model Product {
+  id              String        @id @default(uuid()) @db.Uuid
+  name            String
+  description     String
+  price           Decimal       @db.Decimal(10, 2)
+  sku             String        @unique
+  slug            String        @unique
+  stockQuantity   Int           @default(0)
+  status          ProductStatus @default(DRAFT)
+  attributes      Json?
+  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
+  compareAtPrice  Decimal?      @db.Decimal(10, 2)
+  isFeatured      Boolean       @default(false)
+  metaTitle       String?
+  metaDescription String?
+
+  // Relationships
+  productImages ProductImage[]
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  reviews       Review[]
+
+  // Optional relationships with Artisan and NGO
+  artisanId String?  @db.Uuid
+  artisan   Artisan? @relation(fields: [artisanId], references: [id])
+
+  ngoId String? @db.Uuid
+  ngo   NGO?    @relation(fields: [ngoId], references: [id])
+
+  @@index([status])
+  @@index([artisanId])
+  @@index([isFeatured, status])
+  @@index([ngoId])
+
+}
+
+//3. ProductImage
+
+model ProductImage {
+  id           String   @id @default(uuid()) @db.Uuid
+  imageUrl     String
+  altText      String?
+  displayOrder Int      @default(0)
+  isPrimary    Boolean  @default(false)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  //relationships
+  productId String  @db.Uuid
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@index([productId, displayOrder])
+  @@unique([productId], where: { isPrimary: true })
+}
+
+//4. Artisan 
+
+model Artisan {
+  id                    String   @id @default(uuid()) @db.Uuid
+  fullName              String
+  email                 String?
+  phone                 String?
+  profileImage          String?
+  experienceYears       Int      @default(0)
+  location              String?
+  bio                   String?
+  skills                String[]
+  beneficiaryStatusTags String[]
+  createdAt             DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @db.Timestamptz(3)
+
+  ngoId String? @db.Uuid
+  ngo   NGO?    @relation(fields: [ngoId], references: [id])
+
+  products   Product[]
+  orderItems OrderItem[]
+
+  @@index([ngoId])
+}
+
+//5. NGO
+
+model NGO {
+  id                     String    @id @default(uuid()) @db.Uuid
+  legalName              String
+  brandName              String?
+  logoUrl                String?
+  complianceDocumentUrl  String?
+  contactEmail           String
+  contactPhone           String?
+  headquartersAddress    String?
+  description            String?
+  establishedYear        Int?
+  accountStatus          NGOStatus @default(PENDING)
+  beneficiaryCountAnnual Int?
+  beneficiaryCountYear   Int?
+  primaryCause           String?
+  createdAt              DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime  @updatedAt @db.Timestamptz(3)
+
+  products   Product[]
+  artisans   Artisan[]
+  ngoPayouts NGOPayout[]
+  orderItems OrderItem[]
+}
+
+//6. Cart
+
+model Cart {
+  id        String   @id @default(uuid()) @db.Uuid
+  cartType  CartType @default(ACTIVE)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  //relationships
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id])
+
+  cartItems CartItem[]
+
+  @@index([userId, cartType])
+  
+ 
+  
+}
+
+//7. CartItem
+
+model CartItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  productId String  @db.Uuid
+  product   Product @relation(fields: [productId], references: [id])
+  cartId    String  @db.Uuid
+  cart      Cart    @relation(fields: [cartId], references: [id])
+
+  @@unique([cartId, productId])
+}
+
+//8. Order
+
+model Order {
+  id             String      @id @default(uuid()) @db.Uuid
+  orderNumber    String      @unique
+  status         OrderStatus @default(PENDING)
+  subtotal       Decimal     @db.Decimal(10, 2)
+  discountAmount Decimal     @default(0) @db.Decimal(10, 2)
+  shippingAmount Decimal     @default(0) @db.Decimal(10, 2)
+  taxAmount      Decimal     @default(0) @db.Decimal(10, 2)
+  totalAmount    Decimal     @db.Decimal(10, 2)
+
+  // Relationships
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id])
+
+  addressId String  @db.Uuid
+  address   Address @relation(fields: [addressId], references: [id])
+
+  payments   Payment[]
+  orderItems OrderItem[]
+  refunds    Refund[]
+
+  // Historical shipping-address snapshot
+  shippingFullName     String
+  shippingPhone        String
+  shippingAddressLine1 String
+  shippingAddressLine2 String?
+  shippingCity         String
+  shippingState        String
+  shippingPostalCode   String
+  shippingCountry      String  @default("India")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+//9. OrderItem
+
+model OrderItem {
+  id             String   @id @default(uuid()) @db.Uuid
+  productName    String
+  quantity       Int
+  unitPrice      Decimal  @db.Decimal(10, 2)
+  discountAmount Decimal  @default(0) @db.Decimal(10, 2)
+  taxAmount      Decimal  @default(0) @db.Decimal(10, 2)
+  subtotal       Decimal  @db.Decimal(10, 2)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  productId String   @db.Uuid
+  product   Product  @relation(fields: [productId], references: [id])
+  ngoId     String?  @db.Uuid
+  ngo       NGO?     @relation(fields: [ngoId], references: [id])
+  artisanId String?  @db.Uuid
+  artisan   Artisan? @relation(fields: [artisanId], references: [id])
+  orderId   String   @db.Uuid
+  order     Order    @relation(fields: [orderId], references: [id])
+
+  reviews        Review[]
+  refunds        Refund[]
+  ngoPayoutItems NGOPayoutItem[]
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+//10. Address
+
+model Address {
+  id           String      @id @default(uuid()) @db.Uuid
+  fullName     String
+  phone        String
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  state        String
+  postalCode   String
+  country      String      @default("India")
+  addressType  AddressType @default(HOME)
+  isDefault    Boolean     @default(false)
+
+  //relationships
+  userId String  @db.Uuid
+  user   User    @relation(fields: [userId], references: [id])
+  orders Order[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([userId])
+  @@unique([userId], where: { isDefault: true })
+}
+
+//11. Payment
+
+model Payment {
+  id             String        @id @default(uuid()) @db.Uuid
+  amount         Decimal       @db.Decimal(10, 2)
+  currency       String        @default("INR")
+  paymentGateway String
+  gatewayOrderId String?       @unique
+  status         PaymentStatus @default(PENDING)
+  paidAt         DateTime?     @db.Timestamptz(3)
+
+  orderId String @db.Uuid
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  paymentAttempts PaymentAttempt[]
+  refunds         Refund[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([orderId])
+}
+
+//12. PaymentAttempt
+
+model PaymentAttempt {
+  id                   String               @id @default(uuid()) @db.Uuid
+  gatewayTransactionId String?              @unique
+  paymentMethod        PaymentMethod
+  status               PaymentAttemptStatus @default(PENDING)
+  failureCode          String?
+  failureMessage       String?
+  attemptedAt          DateTime             @default(now()) @db.Timestamptz(3)
+  completedAt          DateTime?            @db.Timestamptz(3)
+
+  paymentId String  @db.Uuid
+  payment   Payment @relation(fields: [paymentId], references: [id])
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([paymentId, attemptedAt])
+}
+
+//13. CorporateGifting
+
+model CorporateGiftingEnquiry {
+  id                    String               @id @default(uuid()) @db.Uuid
+  companyName           String
+  contactName           String
+  contactEmail          String
+  contactPhone          String?
+  quantityRequired      Int?
+  budget                Decimal?             @db.Decimal(10, 2)
+  occasion              String?
+  requirements          String?
+  preferredDeliveryDate DateTime?            @db.Timestamptz(3)
+  status                GiftingEnquiryStatus @default(NEW)
+  createdAt             DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime             @updatedAt @db.Timestamptz(3)
+}
+
+//14. Reviews
+
+model Review {
+  id      String  @id @default(uuid()) @db.Uuid
+  rating  Int
+  title   String?
+  comment String?
+
+  //relationships
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id])
+
+  productId String  @db.Uuid
+  product   Product @relation(fields: [productId], references: [id])
+
+  orderItemId String    @db.Uuid
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id])
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([productId, createdAt])
+  @@unique([userId, productId])
+}
+
+//15. Refund
+
+model Refund {
+  id              String       @id @default(uuid()) @db.Uuid
+  amount          Decimal      @db.Decimal(10, 2)
+  reason          String
+  status          RefundStatus @default(REQUESTED)
+  gatewayRefundId String?      @unique
+  requestedAt     DateTime     @default(now()) @db.Timestamptz(3)
+  processedAt     DateTime?    @db.Timestamptz(3)
+
+  orderId String @db.Uuid
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  paymentId String  @db.Uuid
+  payment   Payment @relation(fields: [paymentId], references: [id])
+
+  orderItemId String?    @db.Uuid
+  orderItem   OrderItem? @relation(fields: [orderItemId], references: [id])
+
+  ngoPayoutItems NGOPayoutItem[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([orderId])
+}
+
+//16 NGOPayout
+
+model NGOPayout {
+  id                     String          @id @default(uuid()) @db.Uuid
+  payoutReference        String          @unique
+  periodStart            DateTime        @db.Timestamptz(3)
+  periodEnd              DateTime        @db.Timestamptz(3)
+  grossSalesAmount       Decimal         @db.Decimal(10, 2)
+  commissionAmount       Decimal         @db.Decimal(10, 2)
+  refundAdjustmentAmount Decimal         @default(0) @db.Decimal(10, 2)
+  otherAdjustmentAmount  Decimal         @default(0) @db.Decimal(10, 2)
+  netPayoutAmount        Decimal         @db.Decimal(10, 2)
+  status                 NGOPayoutStatus @default(PENDING)
+  paymentReference       String?
+  paidAt                 DateTime?       @db.Timestamptz(3)
+  createdAt              DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime        @updatedAt @db.Timestamptz(3)
+
+  ngoId String @db.Uuid
+  ngo   NGO    @relation(fields: [ngoId], references: [id])
+
+  ngoPayoutItems NGOPayoutItem[]
+
+  @@index([ngoId, createdAt])
+}
+
+//17. NGOPayoutItem
+
+model NGOPayoutItem {
+  id          String          @id @default(uuid()) @db.Uuid
+  entryType   PayoutEntryType
+  description String?
+  amount      Decimal         @db.Decimal(10, 2)
+  createdAt   DateTime        @default(now()) @db.Timestamptz(3)
+
+  ngoPayoutId String    @db.Uuid
+  ngoPayout   NGOPayout @relation(fields: [ngoPayoutId], references: [id])
+
+  orderItemId String?    @db.Uuid
+  orderItem   OrderItem? @relation(fields: [orderItemId], references: [id])
+
+  refundId String? @db.Uuid
+  refund   Refund? @relation(fields: [refundId], references: [id])
+
+  @@index([ngoPayoutId])
+}
+
+//Enums
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHERS
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  OUT_OF_STOCK
+  ARCHIVED
+}
+
+enum NGOStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum CartType {
+  ACTIVE
+  ABANDONED
+  CONVERTED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum AddressType {
+  HOME
+  WORK
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  UPI
+  CARD
+  NET_BANKING
+  WALLET
+}
+
+enum PaymentAttemptStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum GiftingEnquiryStatus {
+  NEW
+  CONTACTED
+  QUOTATION_SENT
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum RefundStatus {
+  REQUESTED
+  APPROVED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  REJECTED
+  CANCELLED
+}
+
+enum NGOPayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+enum PayoutEntryType {
+  SALE
+  REFUND
+  COMMISSION
+  ADJUSTMENT
+}
