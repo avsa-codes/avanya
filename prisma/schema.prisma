@@ -17,28 +17,76 @@ datasource db {
 //1. User
 
 model User {
-  id              String       @id @default(uuid()) @db.Uuid
-  fullName        String
-  email           String       @unique
-  passwordHash    String
-  gender          Gender
-  profileImage    String?
-  isEmailVerified Boolean      @default(false)
-  isDeleted       Boolean      @default(false)
-  authProvider    AuthProvider
+  id            String    @id @default(uuid()) @db.Uuid
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  gender        Gender?
+  isDeleted     Boolean   @default(false)
 
-  //relationships
+  // Better Auth relationships
+  accounts      Account[]
+  sessions      Session[]
 
-  carts     Cart[]
-  addresses Address[]
-  orders    Order[]
-  reviews   Review[]
+  // Marketplace relationships
+  carts         Cart[]
+  addresses     Address[]
+  orders        Order[]
+  reviews       Review[]
 
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(3)
+}
+
+
+//Better Auth Models
+
+
+model Account {
+  id                    String    @id @default(uuid()) @db.Uuid
+  accountId             String
+  providerId            String
+  userId                String    @db.Uuid
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
+}
+
+
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  expiresAt DateTime @db.Timestamptz(3)
+  token     String   @unique
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  ipAddress String?
+  userAgent String?
 
- 
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+
+model Verification {
+  id         String   @id @default(uuid()) @db.Uuid
+  identifier String
+  value      String
+  expiresAt  DateTime @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([identifier])
+}
+
 
 //2. Product
 

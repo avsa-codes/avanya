@@ -1,12 +1,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Bell, Heart, ShoppingCart } from 'lucide-react';
+import AuthNavLinks from '@/components/layout/AuthNavLinks';
 
 const navigationLinks = [
   { label: 'Marketplace', href: '/marketplace' },
   { label: 'Artisans', href: '/artisans' },
   { label: 'Gifting', href: '/gifting' },
-  { label: 'Dashboard', href: '/dashboard' },
 ];
 
 export default function Navbar() {
@@ -67,12 +67,7 @@ export default function Navbar() {
             <Bell size={21} strokeWidth={1.7} />
           </Link>
 
-          <Link
-            href="/sign-in"
-            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
-          >
-            Sign In
-          </Link>
+          <AuthNavLinks />
         </div>
       </div>
     </header>

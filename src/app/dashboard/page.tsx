@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import LogoutButton from '@/components/layout/LogoutButton';
+import { authClient } from '@/lib/auth-client';
 
 type Section = 'overview' | 'orders' | 'addresses' | 'wishlist' | 'settings';
 
@@ -33,6 +35,11 @@ const orders = [
 export default function AccountPage() {
   const [activeSection, setActiveSection] = useState<Section>('overview');
 
+  const { data: session, isPending } = authClient.useSession();
+
+  const userName = session?.user?.name || 'Avanya Customer';
+  const userEmail = session?.user?.email || '';
+
   return (
     <main className="min-h-screen bg-[#FAF8F2] text-[#211C18]">
       <div className="mx-auto max-w-[1440px] px-5 py-10 sm:px-8 sm:py-14 lg:px-12">
@@ -54,10 +61,10 @@ export default function AccountPage() {
           <aside className="h-fit border border-[#E7DED3] bg-white p-5">
             <div className="flex items-center gap-3 border-b border-[#EAE2D8] pb-5">
               <div className="flex size-12 items-center justify-center rounded-full bg-[#8B2625] font-serif text-xl text-white">
-                A
+                {userName.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
-                <p className="font-serif text-lg">Avanya Customer</p>
+                <p className="truncate font-serif text-lg">{userName}</p>
                 <p className="truncate text-xs text-stone-500">
                   Welcome to your account
                 </p>
@@ -91,6 +98,10 @@ export default function AccountPage() {
             >
               ← Continue shopping
             </Link>
+
+            <div className="mt-5 border-t border-[#EAE2D8] pt-5">
+              <LogoutButton />
+            </div>
           </aside>
 
           <div className="min-w-0">
@@ -100,7 +111,9 @@ export default function AccountPage() {
                   <p className="text-xs uppercase tracking-[0.18em] text-[#9A5144]">
                     Account overview
                   </p>
-                  <h2 className="mt-2 font-serif text-3xl">Welcome back.</h2>
+                  <h2 className="mt-2 font-serif text-3xl">
+                    Welcome back, {userName.split(' ')[0]}.
+                  </h2>
                   <p className="mt-2 text-sm leading-6 text-stone-600">
                     Your purchases help keep traditional craftsmanship alive.
                     Thank you for being part of the journey.
@@ -187,10 +200,8 @@ export default function AccountPage() {
                       Personal details
                     </p>
                     <h2 className="mt-2 font-serif text-2xl">Your profile</h2>
-                    <p className="mt-4 text-sm">Avanya Customer</p>
-                    <p className="mt-1 text-sm text-stone-500">
-                      customer@example.com
-                    </p>
+                    <p className="mt-4 text-sm">{userName}</p>
+                    <p className="mt-1 text-sm text-stone-500">{userEmail}</p>
                     <button
                       type="button"
                       onClick={() => setActiveSection('settings')}
