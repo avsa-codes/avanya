@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { authClient } from '@/lib/auth-client';
-import { useRouter } from 'next/navigation';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 
 export default function RegisterPage() {
@@ -11,39 +10,71 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const router = useRouter();
+  const [emailSent, setEmailSent] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setLoading(true);
     setError('');
-    setSuccess('');
 
     try {
-      const { error: signUpError } = await authClient.signUp.email({
-        name,
-        email,
-        password,
-      });
+      const { error: signUpError } = await authClient.signUp.email(
+        {
+          name,
+          email,
+          password,
+        },
+        {
+          onSuccess: () => {
+            setEmailSent(true);
+            setPassword('');
+          },
+        }
+      );
 
       if (signUpError) {
         setError(signUpError.message || 'Registration failed.');
         return;
       }
 
-      setSuccess('Your account has been created successfully.');
-      setName('');
-      setEmail('');
+      // Show email confirmation instructions instead of redirecting.
+      setEmailSent(true);
       setPassword('');
-      router.push('/marketplace');
-      router.refresh();
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
+  }
+
+  if (emailSent) {
+    return (
+      <main className="mx-auto max-w-md p-6 text-center">
+        <div className="mb-4 text-4xl" aria-hidden="true">
+          ✉️
+        </div>
+
+        <h1 className="mb-3 text-2xl font-bold">Check your email</h1>
+
+        <p className="mb-4 text-gray-600">We've sent a verification link to:</p>
+
+        <p className="mb-4 break-all font-medium">{email}</p>
+
+        <p className="mb-6 text-sm text-gray-600">
+          Click the link in the email to verify your address and finish setting
+          up your Avanya account. Check your spam folder too.
+        </p>
+
+        <button
+          type="button"
+          onClick={() => setEmailSent(false)}
+          className="text-sm underline"
+        >
+          Back to registration
+        </button>
+      </main>
+    );
   }
 
   return (
@@ -107,9 +138,13 @@ export default function RegisterPage() {
           {loading ? 'Creating account...' : 'Create account'}
         </button>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {success && <p className="text-sm text-green-600">{success}</p>}
+        {error && (
+          <p role="alert" className="text-sm text-red-600">
+            {error}
+          </p>
+        )}
       </form>
+
       <div className="mt-6">
         <div className="mb-4 flex items-center gap-3">
           <div className="h-px flex-1 bg-gray-200" />

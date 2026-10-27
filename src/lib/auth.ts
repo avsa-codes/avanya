@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { prisma } from '@/lib/prisma';
+import { sendVerificationEmail as sendEmail } from '@/lib/email';
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
@@ -11,6 +12,25 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: true,
+  },
+
+  emailVerification: {
+    sendOnSignUp: true,
+    sendOnSignIn: true,
+    autoSignInAfterVerification: true,
+
+    callbackURL: '/verify-email',
+
+    sendVerificationEmail: async ({ user, url }) => {
+      const verificationUrl = new URL(url);
+      verificationUrl.searchParams.set(
+        'callbackURL',
+        `${process.env.BETTER_AUTH_URL}/verify-email`
+      );
+
+      await sendEmail(user.email, verificationUrl.toString());
+    },
   },
 
   account: {
